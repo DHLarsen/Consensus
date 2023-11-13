@@ -25,6 +25,7 @@ type ModelClient interface {
 	SendMessage(ctx context.Context, opts ...grpc.CallOption) (Model_SendMessageClient, error)
 	GetUpdate(ctx context.Context, opts ...grpc.CallOption) (Model_GetUpdateClient, error)
 	GiveKey(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Ack, error)
+	ChangeNeighbor(ctx context.Context, in *NeighborDetails, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type modelClient struct {
@@ -109,6 +110,15 @@ func (c *modelClient) GiveKey(ctx context.Context, in *Key, opts ...grpc.CallOpt
 	return out, nil
 }
 
+func (c *modelClient) ChangeNeighbor(ctx context.Context, in *NeighborDetails, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, "/proto.Model/ChangeNeighbor", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ModelServer is the server API for Model service.
 // All implementations must embed UnimplementedModelServer
 // for forward compatibility
@@ -116,6 +126,7 @@ type ModelServer interface {
 	SendMessage(Model_SendMessageServer) error
 	GetUpdate(Model_GetUpdateServer) error
 	GiveKey(context.Context, *Key) (*Ack, error)
+	ChangeNeighbor(context.Context, *NeighborDetails) (*Ack, error)
 	mustEmbedUnimplementedModelServer()
 }
 
@@ -131,6 +142,9 @@ func (UnimplementedModelServer) GetUpdate(Model_GetUpdateServer) error {
 }
 func (UnimplementedModelServer) GiveKey(context.Context, *Key) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GiveKey not implemented")
+}
+func (UnimplementedModelServer) ChangeNeighbor(context.Context, *NeighborDetails) (*Ack, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangeNeighbor not implemented")
 }
 func (UnimplementedModelServer) mustEmbedUnimplementedModelServer() {}
 
@@ -215,6 +229,24 @@ func _Model_GiveKey_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Model_ChangeNeighbor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NeighborDetails)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelServer).ChangeNeighbor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Model/ChangeNeighbor",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelServer).ChangeNeighbor(ctx, req.(*NeighborDetails))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Model_ServiceDesc is the grpc.ServiceDesc for Model service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -225,6 +257,10 @@ var Model_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "giveKey",
 			Handler:    _Model_GiveKey_Handler,
+		},
+		{
+			MethodName: "ChangeNeighbor",
+			Handler:    _Model_ChangeNeighbor_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

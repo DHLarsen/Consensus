@@ -11,6 +11,7 @@ import (
 
 	gRPC "github.com/DHLarsen/ChittyChat/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Peer struct {
@@ -22,11 +23,24 @@ type Peer struct {
 }
 
 var port = ""
+var peerIndex = 0
 var neighbor gRPC.ModelClient
 
 func (p *Peer) GiveKey(ctx context.Context, key *gRPC.Key) (*gRPC.Ack, error) {
 	log.Printf("Recieved key")
-	return nil, nil
+	ack := &gRPC.Ack{Status: "sucess!"}
+	return ack, nil
+}
+
+func (p *Peer) ChangeNeighbor(ctx context.Context, in *gRPC.NeighborDetails) (*gRPC.Ack, error) {		
+	print("Changing neighbor to: ", in.Port)
+	set_neighbor(in.Port)
+	ack := &gRPC.Ack{Status: "sucess in changing neighbor!"}
+	_, err := neighbor.GiveKey(context.Background(), &gRPC.Key{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ack, nil
 }
 
 func get_port(_i int) string {
@@ -41,12 +55,10 @@ func get_port(_i int) string {
 }
 
 func launchPeer() {
-	log.Println("2")
-
 	var list net.Listener
 	port_i := 0
-	log.Println("3")
 
+	//attemp to connect to port untill sucess
 	for port == "" {
 		_port := get_port(port_i)
 		log.Println(_port + "before")
@@ -59,6 +71,7 @@ func launchPeer() {
 		} else {
 			port = _port
 			list = _list
+			peerIndex = port_i
 		}
 
 	}
@@ -70,38 +83,55 @@ func launchPeer() {
 	gRPC.RegisterModelServer(grpcServer, peer)
 	log.Println("Peer upstart sucessfull on port ", port)
 
-	if port == "8909" {
-		_neighbor, err := connectToPeer("8910")
+	if peerIndex > 0 {
+		previous_port := get_port(peerIndex - 1)
+		p_conn, err := connectToPeer(previous_port)
 		if err != nil {
-			print(err)
+			log.Fatal(err)
 		}
-		neighbor = _neighbor
-		ack, err := neighbor.GiveKey(context.Background(), &gRPC.Key{})
-		println("ack: ", ack)
+		own_details := &gRPC.NeighborDetails{
+			Port: port,
+		}
+		println("attempting to change ", previous_port, "'s port to ", port)
+		ack, _ := p_conn.ChangeNeighbor(context.Background(), own_details)
+		print(ack.Status)
+		set_neighbor(get_port(0))
 	}
 	if err := grpcServer.Serve(list); err != nil {
 		log.Fatalf("failed to serve %v", err)
 	}
 }
 
+func set_neighbor(_port string) {
+	_neighbor, err := connectToPeer(_port)
+	if err != nil {
+		print(err)
+	}
+	println("set neighbor to " + _port)
+	neighbor = _neighbor
+}
+
 func connectToPeer(_port string) (gRPC.ModelClient, error) {
+	println("connect to peer entering")
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
+	println("after opts")
 	conn, err := grpc.Dial(":"+_port, opts...)
+	println("after dial")
 	if err != nil {
 		log.Println("Error connecting to peer:", err)
 		return nil, err
 	} else {
 		log.Println("Connected to neighbor at port: ", _port)
 	}
+	println("connect to peer exiting")
 
 	return gRPC.NewModelClient(conn), nil
 }
 
 func main() {
-	log.Println("1")
 	go launchPeer()
 	for {
 	}
