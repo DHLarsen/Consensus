@@ -8,6 +8,11 @@ service Model
 {
     rpc SendMessage (stream Message) returns (Ack);
     rpc GetUpdate (stream UpdateRequest) returns (stream Message);
+    rpc giveKey (Key) returns (Ack);
+}
+
+message Key {
+    string status = 1;
 }
 
 message Message {
