@@ -21,6 +21,4 @@ If port 8889 is occupied, please change the port variable in client/client.go an
 
 To disconnect a client, end the process (CTRL + C in most terminals)
 
-
 protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/Model.proto
-
