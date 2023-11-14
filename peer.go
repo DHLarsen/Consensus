@@ -65,10 +65,18 @@ func criticalAcess() {
 	for {
 		a := <-acessChan
 		time.Sleep(time.Duration(a) * time.Millisecond)
-		err := os.WriteFile("CriticalSection.txt", []byte(writeString), 0644)
+		file, err := os.OpenFile("CriticalSection.txt", os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		_, werr := file.WriteString(writeString)
+		if werr != nil {
+			log.Fatalf("failed writing to file: %s", err)
+		}
+
+		file.Close()
+		writeString = ""
 		wantsKey = false
 		acessAckChan <- true
 	}
