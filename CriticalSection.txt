@@ -1,5 +1,0 @@
-8910: peer 1 sending message
-8908: peer 3 is very cool
-8909: peer 2 is also awesome
-8909: we like to write to critical sections
-8910: i also like to write to critical sectionbs

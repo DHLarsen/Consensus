@@ -65,6 +65,7 @@ func sendKey() {
 func criticalAcess() {
 	for {
 		a := <-acessChan
+		log.Println("Acessing Critical section with key")
 		time.Sleep(time.Duration(a) * time.Millisecond)
 		file, err := os.OpenFile("CriticalSection.txt", os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
@@ -79,6 +80,7 @@ func criticalAcess() {
 		file.Close()
 		writeString = ""
 		wantsKey = false
+		log.Println("Done Acessing Critical section")
 		acessAckChan <- true
 	}
 }
@@ -88,17 +90,6 @@ func (p *Peer) ChangeNeighbor(ctx context.Context, in *gRPC.NeighborDetails) (*g
 	go set_neighbor(in.Port)
 	return ack, nil
 }
-
-/*
-// Is called with go ChangeNeighborSeperateThread.
-func ChangeNeighborSeperateThread(ctx context.Context, in *gRPC.NeighborDetails) {
-	set_neighbor(in.Port)
-	key, err := neighbor.GiveKey(context.Background(), &gRPC.Key{})
-	println(key.Status)
-	if err != nil {
-		log.Fatal(err)
-	}
-}*/
 
 func get_port(_i int) string {
 	body, err := os.ReadFile("ports.txt")
@@ -201,6 +192,7 @@ func main() {
 		writeString += fmt.Sprint(port) + ": " + input + "\n"
 		writeStringMutex.Unlock()
 		wantsKey = true
+		log.Println("Key requested")
 		c++
 	}
 }
