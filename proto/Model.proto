@@ -6,8 +6,6 @@ package proto;
 
 service Model
 {
-    rpc SendMessage (stream Message) returns (Ack);
-    rpc GetUpdate (stream UpdateRequest) returns (stream Message);
     rpc giveKey (Key) returns (Ack);
     rpc ChangeNeighbor (NeighborDetails) returns (Ack);
 }
@@ -19,17 +17,6 @@ message NeighborDetails {
 message Key {
     string status = 1;
 }
-
-message Message {
-    string clientName = 1;
-    string message = 2;
-    repeated int64 time = 3;
-}
-
-message UpdateRequest {
-    string ClientName = 1;
-}
-
 
 message Ack {
     string status = 1;
