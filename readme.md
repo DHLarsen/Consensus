@@ -1,18 +1,12 @@
 Made by tpep, dhla and habr
 
-How to run:
-Starting the server:
-From a terminal navigate to the server folder and run the command: "go run server.go"
-Or from project root directory run "go run server/server.go"
 
 repeat these steps for every node(peer):
 
-Starting the client:
+Starting a peer:
 open a new terminal. Run the command: "go run peer.go"
-client.go
 
-Send messages:
-Type the message and press enter.
+To write a message to the critical section simply input it in the console while the peer is running in it
 
 If your ports are occupied, please change the ports in the ports.txt file.
 

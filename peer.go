@@ -36,7 +36,8 @@ var acessChan = make(chan int)
 var acessAckChan = make(chan bool)
 
 func (p *Peer) GiveKey(ctx context.Context, key *gRPC.Key) (*gRPC.Ack, error) {
-	log.Printf("Recieved key")
+	//uncomment this line to print every time the peer recieves the key
+	//log.Printf("Recieved key")
 	ack := &gRPC.Ack{Status: "Give key sucess!"}
 	hasKey = true
 	return ack, nil
@@ -47,7 +48,7 @@ func sendKey() {
 		if hasKey && neighbor != nil {
 			if wantsKey {
 				//send wait time to acessChan, which starts acess in critical section
-				acessChan <- 1
+				acessChan <- 1000
 				//waits for acessAck
 				<-acessAckChan
 			}
@@ -83,7 +84,6 @@ func criticalAcess() {
 }
 
 func (p *Peer) ChangeNeighbor(ctx context.Context, in *gRPC.NeighborDetails) (*gRPC.Ack, error) {
-	println("Changing neighbor to:", in.Port)
 	ack := &gRPC.Ack{Status: in.Port + " is changing its neighbor to you!"}
 	go set_neighbor(in.Port)
 	return ack, nil
@@ -119,10 +119,9 @@ func launchPeer() {
 	for port == "" {
 		_port := get_port(port_i)
 		_port = strings.Trim(_port, " ")
-		log.Println(_port)
 		_list, err := net.Listen("tcp", "localhost:"+strings.Trim(_port, " "))
 		if err != nil {
-			fmt.Println("failed to listen ", err)
+			//fmt.Println("failed to listen ", err)
 			port_i++
 		} else {
 			port = _port
@@ -149,9 +148,9 @@ func launchPeer() {
 		own_details := &gRPC.NeighborDetails{
 			Port: port,
 		}
-		println("attempting to change ", previous_port, "'s neighbor to port ", port)
+		log.Println("attempting to change ", previous_port, "'s neighbor to port ", port)
 		ack, _ := p_conn.ChangeNeighbor(context.Background(), own_details)
-		print(ack.Status)
+		log.Println(ack.Status)
 	} else {
 		hasKey = true
 	}
@@ -165,17 +164,14 @@ func set_neighbor(_port string) {
 	if err != nil {
 		print(err)
 	}
-	println("set neighbor to " + _port)
 	neighbor = _neighbor
 }
 
 func connectToPeer(_port string) (gRPC.ModelClient, error) {
-	println("connect to peer entering")
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	println("after opts. before dial "+":"+_port, opts)
 	conn, err := grpc.Dial(":"+_port, opts...)
 	if err != nil {
 		log.Println("Error connecting to peer:", err)
@@ -191,6 +187,7 @@ func main() {
 	go launchPeer()
 	go sendKey()
 	go criticalAcess()
+	c := 0
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		//Read input into var input and any errors into err
@@ -201,8 +198,9 @@ func main() {
 		input = strings.TrimSpace(input) //Trim input
 
 		writeStringMutex.Lock()
-		writeString += input + "\n"
+		writeString += fmt.Sprint(port) + ": " + input + "\n"
 		writeStringMutex.Unlock()
 		wantsKey = true
+		c++
 	}
 }

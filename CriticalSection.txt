@@ -1,16 +1,5 @@
-wowsies
-check 1
-check 2
-check 2
-crazy
-check 2
-crazy
-insane
-check 1
-insane
-crazy
-yessir
-inane
-in the
-brane
-wowsers
+8910: peer 1 sending message
+8908: peer 3 is very cool
+8909: peer 2 is also awesome
+8909: we like to write to critical sections
+8910: i also like to write to critical sectionbs
