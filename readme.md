@@ -1,3 +1,5 @@
+#Mutual exclusion example
+
 Made by tpep, dhla and habr
 
 This project was developed with our ChittyChat project as a baseline
