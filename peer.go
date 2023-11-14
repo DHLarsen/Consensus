@@ -33,15 +33,22 @@ func (p *Peer) GiveKey(ctx context.Context, key *gRPC.Key) (*gRPC.Ack, error) {
 	return ack, nil
 }
 
-func (p *Peer) ChangeNeighbor(ctx context.Context, in *gRPC.NeighborDetails) (*gRPC.Ack, error) {		
-	print("Changing neighbor to: ", in.Port)
+func (p *Peer) ChangeNeighbor(ctx context.Context, in *gRPC.NeighborDetails) (*gRPC.Ack, error) {
+	println("Changing neighbor to:", in.Port)
+	println("\"" + in.Port + "\"")
+	ack := &gRPC.Ack{Status: "Will change neighbor to you:" + in.Port}
+	go ChangeNeighborSeperateThread(ctx, in)
+	return ack, nil
+}
+
+// Is called with go ChangeNeighborSeperateThread.
+func ChangeNeighborSeperateThread(ctx context.Context, in *gRPC.NeighborDetails) {
 	set_neighbor(in.Port)
-	ack := &gRPC.Ack{Status: "sucess in changing neighbor!"}
+	//ack := &gRPC.Ack{Status: "sucess in changing neighbor!"}
 	_, err := neighbor.GiveKey(context.Background(), &gRPC.Key{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	return ack, nil
 }
 
 func get_port(_i int) string {
@@ -62,9 +69,8 @@ func launchPeer() {
 	//attemp to connect to port untill sucess
 	for port == "" {
 		_port := get_port(port_i)
-		log.Println(_port + "before")
 		_port = strings.Trim(_port, " ")
-		log.Println(_port + "after")
+		log.Println(_port)
 		_list, err := net.Listen("tcp", "localhost:"+strings.Trim(_port, " "))
 		if err != nil {
 			fmt.Println("failed to listen ", err)
@@ -84,7 +90,7 @@ func launchPeer() {
 	gRPC.RegisterModelServer(grpcServer, peer)
 	log.Println("Peer upstart sucessfull on port ", port)
 
-	if peerIndex > 0 {	
+	if peerIndex > 0 {
 		set_neighbor(get_port(0))
 		previous_port := get_port(peerIndex - 1)
 		p_conn, _conn, err := connectToPeer(previous_port)
@@ -123,10 +129,11 @@ func connectToPeer(_port string) (gRPC.ModelClient, *grpc.ClientConn, error) {
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	println("after opts")
+	println("after opts. before dial "+":"+_port, opts)
 	conn, err := grpc.Dial(":"+_port, opts...)
-	neighborConn = conn
 	println("after dial")
+	neighborConn = conn
+	println("after connChange")
 	if err != nil {
 		log.Println("Error connecting to peer:", err)
 		return nil, conn, err
