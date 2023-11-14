@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	gRPC "github.com/DHLarsen/ChittyChat/proto"
 	"google.golang.org/grpc"
@@ -26,19 +28,36 @@ var port = ""
 var peerIndex = 0
 var neighbor gRPC.ModelClient
 
+var hasKey = false
+
 func (p *Peer) GiveKey(ctx context.Context, key *gRPC.Key) (*gRPC.Ack, error) {
 	log.Printf("Recieved key")
 	ack := &gRPC.Ack{Status: "Give key sucess!"}
+	hasKey = true
 	return ack, nil
+}
+
+func sendKey() {
+	for {
+		if hasKey && neighbor != nil {
+			hasKey = false
+			key := &gRPC.Key{
+				Status: "key",
+			}
+			neighbor.GiveKey(context.Background(), key)
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func (p *Peer) ChangeNeighbor(ctx context.Context, in *gRPC.NeighborDetails) (*gRPC.Ack, error) {
 	println("Changing neighbor to:", in.Port)
 	ack := &gRPC.Ack{Status: in.Port + " is changing its neighbor to you!"}
-	go ChangeNeighborSeperateThread(ctx, in)
+	go set_neighbor(in.Port)
 	return ack, nil
 }
 
+/*
 // Is called with go ChangeNeighborSeperateThread.
 func ChangeNeighborSeperateThread(ctx context.Context, in *gRPC.NeighborDetails) {
 	set_neighbor(in.Port)
@@ -47,7 +66,7 @@ func ChangeNeighborSeperateThread(ctx context.Context, in *gRPC.NeighborDetails)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
+}*/
 
 func get_port(_i int) string {
 	body, err := os.ReadFile("ports.txt")
@@ -101,6 +120,8 @@ func launchPeer() {
 		println("attempting to change ", previous_port, "'s neighbor to port ", port)
 		ack, _ := p_conn.ChangeNeighbor(context.Background(), own_details)
 		print(ack.Status)
+	} else {
+		hasKey = true
 	}
 	if err := grpcServer.Serve(list); err != nil {
 		log.Fatalf("failed to serve %v", err)
@@ -130,13 +151,24 @@ func connectToPeer(_port string) (gRPC.ModelClient, error) {
 	} else {
 		log.Println("Connected to neighbor at port: ", _port)
 	}
-	println("connect to peer exiting")
 
 	return gRPC.NewModelClient(conn), nil
 }
 
 func main() {
 	go launchPeer()
+	go sendKey()
+	reader := bufio.NewReader(os.Stdin)
 	for {
+		//Read input into var input and any errors into err
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		input = strings.TrimSpace(input) //Trim input
+
+		if input == "send" {
+			sendKey()
+		}
 	}
 }
