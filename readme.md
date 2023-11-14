@@ -1,4 +1,4 @@
-#Mutual exclusion example
+# Mutual exclusion example
 
 Made by tpep, dhla and habr
 
