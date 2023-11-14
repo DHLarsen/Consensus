@@ -19,9 +19,8 @@ import (
 type Peer struct {
 	gRPC.UnimplementedModelServer
 
-	name  string
-	port  string
-	mutex sync.Mutex
+	name string
+	port string
 }
 
 var port = ""
@@ -29,6 +28,12 @@ var peerIndex = 0
 var neighbor gRPC.ModelClient
 
 var hasKey = false
+var wantsKey = false
+var writeString = ""
+var writeStringMutex sync.Mutex
+
+var acessChan = make(chan int)
+var acessAckChan = make(chan bool)
 
 func (p *Peer) GiveKey(ctx context.Context, key *gRPC.Key) (*gRPC.Ack, error) {
 	log.Printf("Recieved key")
@@ -40,6 +45,12 @@ func (p *Peer) GiveKey(ctx context.Context, key *gRPC.Key) (*gRPC.Ack, error) {
 func sendKey() {
 	for {
 		if hasKey && neighbor != nil {
+			if wantsKey {
+				//send wait time to acessChan, which starts acess in critical section
+				acessChan <- 1
+				//waits for acessAck
+				<-acessAckChan
+			}
 			hasKey = false
 			key := &gRPC.Key{
 				Status: "key",
@@ -47,6 +58,19 @@ func sendKey() {
 			neighbor.GiveKey(context.Background(), key)
 		}
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func criticalAcess() {
+	for {
+		a := <-acessChan
+		time.Sleep(time.Duration(a) * time.Millisecond)
+		err := os.WriteFile("CriticalSection.txt", []byte(writeString), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wantsKey = false
+		acessAckChan <- true
 	}
 }
 
@@ -158,6 +182,7 @@ func connectToPeer(_port string) (gRPC.ModelClient, error) {
 func main() {
 	go launchPeer()
 	go sendKey()
+	go criticalAcess()
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		//Read input into var input and any errors into err
@@ -167,8 +192,9 @@ func main() {
 		}
 		input = strings.TrimSpace(input) //Trim input
 
-		if input == "send" {
-			sendKey()
-		}
+		writeStringMutex.Lock()
+		writeString += input + "\n"
+		writeStringMutex.Unlock()
+		wantsKey = true
 	}
 }
